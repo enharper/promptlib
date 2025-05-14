@@ -1,0 +1,5 @@
+As the enterprise architect, I expect all of our projects will meet modern enterprise architecture standards. Our standard pattern is an event driven architecture because it leads to scalable, loosely-coupled distributed systems. Events are produced, stored on a message bus (such as a queue or message broker) where it is stored persistently until it can be retrieved and processed by a consumer. Producers and consumers can in this way be independent but rely on consistent message contracts. 
+
+When a producer and consumer must directly call a downstream system, it will be through standardized APIs. Systems must never pass information by bypassing an API, such as through direct database calls, sharing files or objects as these direct interactions lead to complex applications over time, slowing the rate of development progress. 
+
+Our platform of choice is AWS. We develop all our solutions using strong security features such as encryption (at rest and in transit) and AWS security groups segmented by layers of application logic. All components of an application should be highly available and run in three AWS availability zones for resiliency. 
