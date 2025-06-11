@@ -1,0 +1,52 @@
+Ticket 01 – Database Models & Migrations
+Goal
+  Introduce versioned guideline storage by creating the guideline_uploads and guideline_rules tables and their corresponding Active Record models.
+Scope
+  New tables with indexes & FKs
+  Model classes with associations & enums
+  Attachments via Active Storage
+  No legacy column removal yet (compatibility shim only)
+Tasks
+  Generate migrations
+    rails g migration CreateGuidelineUploads with columns  
+    client_id:references, uploader_id:references{users}, status:integer, default:0, original_filename:string, content_type:string, processed_at:datetime, failure_reason:text
+
+    rails g migration CreateGuidelineRules with columns  
+    guideline_upload_id:references, text:text, category:string, severity:string, llm_applies:boolean, user_selected:boolean, position:integer
+  Add non‑PK indexes:
+    guideline_uploads.status
+    guideline_rules.guideline_upload_id & guideline_rules.user_selected
+  Define enums
+    class GuidelineUpload < ApplicationRecord
+      enum status: { pending: 0, processing: 1, ready: 2, failed: 3 }
+    end
+  Active Storage
+    GuidelineUpload ⇒ has_one_attached :file
+    Add presence/size validation (<= 50.megabytes)
+
+  Associations
+    class Client
+      has_many :guideline_uploads, dependent: :destroy
+    end
+
+    class GuidelineUpload
+      belongs_to :client
+      belongs_to :uploader, class_name: 'User'
+      has_many   :guideline_rules, dependent: :destroy
+    end
+
+    class GuidelineRule
+      belongs_to :guideline_upload
+    end
+
+  Schema coherence
+    Run bin/rails db:migrate and verify db/schema.rb reflects new tables.
+
+Acceptance Criteria
+  Running migrations on a fresh DB completes with no errors.
+  Client.first.guideline_uploads works.
+  Upload model accepts an attached file and validates size.
+  GuidelineRule.new(user_selected: nil) defaults to false.
+
+Out of Scope
+  Extraction jobs, UI, permissions, or legacy column cleanup.

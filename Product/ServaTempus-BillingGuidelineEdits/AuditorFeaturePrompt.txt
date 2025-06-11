@@ -1,0 +1,323 @@
+<file_map>
+### Removed for security reasons, but includes all the files in the git repo. This gives the LLM some context about what's already built in the hierarchy. 
+</file_map>
+
+---
+
+<file_contents>
+File: /Users/some/path/schema.rb
+rb
+# This file is auto-generated from the current state of the database. Instead
+# of editing this file, please use the migrations feature of Active Record to
+# incrementally modify your database, and then regenerate this schema definition.
+
+ActiveRecord::Schema[7.1].define(version: 2025_06_03_190000) do
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+  enable_extension "vector"
+
+  create_table "aba_codes", force: :cascade do |t|
+    t.string "code"
+    t.string "code_set"
+    t.string "code_group"
+    t.text "detail"
+    t.string "code_type"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "code_title"
+    t.string "description"
+  end
+
+### ... redacted for security, but includes the full database schema. We want the LLM to understand the current structure of the DB so we can add new tables/columns as needed. 
+
+File: /Users/some/path/audit_guideline_extract_job.rb
+rb
+# frozen_string_literal: true
+# Extracts billing rules from uploaded guidelines
+
+class BillingGuidelineExtractJob < ApplicationJob
+  queue_as :default
+
+  def perform(client_id)
+    client = Client.find(client_id)
+    return unless client.billing_guidelines.attached?
+
+    ext = client.billing_guidelines.filename.extension_with_delimiter
+    ### Redacted in the middle
+  end
+end
+
+
+File: /Users/some/path/guideline_ingest_job.rb
+rb
+require 'docx/extractor'
+class GuidelineIngestJob < ApplicationJob
+  queue_as :default
+  CHUNK_SIZE = 2000
+
+  def perform(guideline_id)
+    guideline = Guideline.find(guideline_id)
+
+    data = guideline.file.download
+  end
+end
+
+
+File: /Users/some/path/billing_rule_auditor.rb
+rb
+# frozen_string_literal: true
+# Audits time entries against client billing rules
+
+class BillingRuleAuditor
+  attr_reader :audited_count
+
+  def initialize(client)
+    @client = client
+    @rules  = @client.active_billing_rules
+    @audited_count = 0
+    ### Redacted in the middle
+  end
+end
+
+
+File: /Users/some/path/guideline_retriever.rb
+rb
+class GuidelineRetriever
+  def self.call(client_id:, query:, k: 4)
+    guideline = Client.find(client_id).guidelines.order(created_at: :desc).first
+    ### Redacted in the middle
+  end
+end
+
+
+File: /Users/some/path/llm_service.rb
+rb
+# app/services/open_ai_service.rb
+require 'json'
+
+class OpenAiService
+  FAIRY_TALES = [
+    'Little Red Riding Hood',
+    'Cinderella',
+    'Snow White',
+    'Hansel and Gretel',
+    'Jack and the Beanstalk',
+    'Rapunzel',
+    'Sleeping Beauty',
+    'Beauty and the Beast',
+    'The Little Mermaid',
+    'Rumpelstiltskin'
+  ]
+  ### Redacted in the middle
+  end
+end
+
+
+File: /Users/some/path/auditing_rules.html.erb
+erb
+<%# rubocop:disable all %>
+<h1 class="text-2xl font-bold mb-6">Audit Results for <%= @client.name %></h1>
+<p class="mb-4 text-gray-600">
+  Audited <%= @audited %> entries on <%= l(@audit_time, format: :long) %>.
+</p>
+### Redacted in the middle
+<% end %>
+
+
+File: /Users/some/path/controller_for_clients.rb
+rb
+# frozen_string_literal: true
+# Manages client records and billing audits
+
+class ClientsController < ApplicationController
+  ### Redacted in the middle
+  end
+end
+
+</file_contents>
+
+---
+
+<meta prompt 1 = "[Architect]">
+You are a senior software architect specializing in code design and implementation planning. Your role is to:
+
+1. Analyze the requested changes and break them down into clear, actionable steps
+2. Create a detailed implementation plan that includes:
+   - Files that need to be modified
+   - Specific code sections requiring changes
+   - New functions, methods, or classes to be added
+   - Dependencies or imports to be updated
+   - Data structure modifications
+   - Interface changes
+   - Configuration updates
+
+For each change:
+- Describe the exact location in the code where changes are needed
+- Explain the logic and reasoning behind each modification
+- Provide example signatures, parameters, and return types
+- Note any potential side effects or impacts on other parts of the codebase
+- Highlight critical architectural decisions that need to be made
+
+You may include short code snippets to illustrate specific patterns, signatures, or structures, but do not implement the full solution.
+
+Focus solely on the technical implementation plan - exclude testing, validation, and deployment considerations unless they directly impact the architecture.
+
+Please proceed with your analysis based on the following <user instrctions>
+</meta prompt 1>
+
+---
+
+<user_instructions>
+Product Brief – Serva Tempus Auditor Feature: Guideline Uploader & Curator
+
+Role
+Name / Agent
+Primary Responsibilities
+
+Product Manager
+Eric Harper
+Vision, scope, prioritisation, cross‑team alignment
+
+Fullstack Engineer (Rails 8)
+Eric Harper
+File storage, text‑extraction pipeline, JSON guideline model, API, Guideline curation UI, state management
+Model prompt design, post‑processing heuristics
+
+QA Engineer
+AI QA
+Test plans, fixture docs, end‑to‑end & cross‑browser testing
+
+Security & Compliance
+TBD
+Document‑handling policies, PII redaction
+
+UX / UI Designer
+LLM
+User flows, empty‑states, micro‑copy
+
+DevOps
+Not needed - Deploy with Render
+Storage quotas, background workers, deployment gating
+
+Documentation Writer
+TBD (“DocsBot”)
+Admin + end‑user guides, API reference
+
+Executive Summary
+The Auditor Guideline Uploader & Curator lets Serva Tempus customers attach client‑specific billing‑guideline documents (PDF or Excel) to a client record. The platform automatically extracts individual rules into structured JSON. A new, lightweight curation UI allows users to deselect rules that are irrelevant to routine invoice audits (e.g., “Firm must notify in case of data breach”). The result is a clean, actionable ruleset used by the existing Auditor engine, improving audit accuracy, reducing false positives, and shortening onboarding from days to minutes.
+
+Business Goals / Key Benefit
+Goal
+Target Impact
+Measurement
+
+  Reduce onboarding time for a new client’s guidelines
+  ↓ from 3 days → < 30 mins
+  Median time between “Upload” and “First successful audit”
+
+  Increase audit precision (fewer irrelevant flags)
+  ↓ false‑positive rate 30 %
+  % of audit flags overridden by users
+
+  Boost customer satisfaction (CSAT)
+  +15 pp on onboarding surveys
+  Average CSAT score post‑onboarding
+
+Background & Overview
+  Law‑firm and ALSP clients supply billing guidelines in unstructured PDFs or Excel workbooks. Serva Tempus’ Auditor currently requires manual configuration of each rule in the app, a slow, error‑prone task often delegated to our support team. Additionally, many clauses in these documents (security, reporting, marketing, etc.) are irrelevant to everyday billing audits, causing noise if blindly enforced.
+  The proposed feature automates extraction using an LLM‑powered pipeline, then empowers users to curate the extracted rules with a few clicks—keeping invoice‑related guidelines and discarding the rest.
+
+Technical context
+  Rails 8 monolith, PostgreSQL 15, Hotwire/Turbo, Tailwind + Flowbite
+  Solid Queue for background jobs (single‑DB setup)
+  Storage: Active Storage on S3‑compatible bucket
+  Scope & High‑Level Requirements
+
+Notes & Constraints
+R1
+  User uploads PDF or XLS/XLSX to a Client record
+  ≤ 50 MB, virus‑scanned, stored in S3
+
+R2
+  System extracts text & splits into discrete guideline candidates
+  LLM Calls to OpenAI File API
+
+R3
+  LLM classification → JSON output
+  Schema: {id, text, category, severity?, applies_to_billing (bool)?, comments}
+
+R4
+  Present extracted guidelines in a paginated table with checkboxes
+  Hotwire partial updates; bulk‑select; search/filter
+
+R5
+  Default selection = “applies_to_billing” predictions; user can toggle
+  Persist interim selections in DB
+
+R6
+  On “Save”, only selected guidelines become active audit rules
+  Create BillingGuideline records
+
+R7
+  Version history & re‑curation
+  Keep original upload + JSON; allow future edits
+
+R8
+  Role‑based permissions
+  Org admins & Users
+
+R9
+  Error handling & notifications
+  Email + in‑app toast on extraction failure
+
+R10
+  Accessibility & keyboard navigation
+  WCAG 2.1 AA compliance
+
+Out of Scope
+  Automated mapping of guidelines to specific invoice line‑item codes.
+  Support for image‑only formats (TIFF, BMP).
+  Real‑time co‑editing by multiple users.
+  Bulk deletion of existing active guidelines (handled elsewhere).
+
+Risks of Not Doing This Project
+Risk / Likely Impact
+  Continued manual guideline entry
+  High onboarding cost; churn risk
+  Audit noise lowers trust
+  Users ignore flags, diminishing product value
+  Competitors launch similar automation
+  Loss of competitive edge in RFPs
+  Support team overload
+  Escalating COGS, slower response times
+
+Success Criteria & Metrics
+  Time‑to‑Audit: median hours from guideline upload → first audit < 2 h
+  False‑Positive Rate: < 5 % of flags marked “not applicable” after curation
+  CSAT Onboarding Survey: ≥ 90 % “satisfied” or higher
+  Extraction Precision/Recall: P ≥ 0.85, R ≥ 0.90 on benchmark set
+  System Reliability: < 1 % extraction job failures/operator intervention
+
+Dependencies
+  OpenAI LLM API quota (or Azure OpenAI) with JSON mode
+  Role & permission tables already in Serva Tempus
+  Tailwind/Flowbite upgrade for checkbox table components
+  S3 lifecycle rules for large uploads
+
+Requested ETA
+  Pilot with two design‑partner law firms by June 6 2025; GA by end of Q2 25.
+
+Deployment Plan
+  Monitor job failure & API latency dashboards; progressive rollout
+  Rollback if extraction error rate > 5 %
+  Measurement & Feedback Loop
+  Telemetry: upload_started, extraction_complete, curation_saved
+  Post‑onboarding survey 24 h after first audit
+  Weekly metrics review in Posthog
+  In‑app feedback widget on curation screen (“Was this helpful?”)
+  Go‑To‑Market (GTM)
+  Beta outreach to customers with > 10 active clients
+  Blog post showcasing 90 % faster onboarding
+  Sales deck with before/after workflow screenshots
+
+</user_instructions>
